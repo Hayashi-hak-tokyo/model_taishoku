@@ -3,22 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 【追加】検索エンジンにインデックスされないようにする（検索避け） -->
     <meta name="robots" content="noindex, nofollow">
     <title>退職プロセス・シミュレーター</title>
     
-    <!-- ReactとReactDOMの読み込み -->
+    <!-- React, ReactDOM, Babel, Tailwindの読み込み -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- JSXをブラウザで動かすためのBabel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS (デザイン用) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* スクロールバーのカスタマイズ */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -29,11 +23,17 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans h-screen overflow-hidden">
 
-    <!-- ここにReactアプリが描画されます -->
-    <div id="root"></div>
+    <!-- ここにReactアプリが描画されます。描画前は「読み込み中...」と出ます -->
+    <div id="root" class="flex items-center justify-center h-full text-gray-500 font-bold">
+        システム読み込み中...<br>
+        (画面が白いままの場合は再読み込みしてください)
+    </div>
 
     <script type="text/babel">
-        // --- アイコンコンポーネント (ライブラリを使わずに直接定義) ---
+        // --- Reactの機能を取り出し ---
+        const { useState, useEffect } = React;
+
+        // --- アイコンコンポーネント ---
         const RotateCcw = ({ size = 24, className = "" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
         );
@@ -46,50 +46,33 @@
         const MinusCircle = ({ size = 24, className = "" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
         );
-        // ロックアイコン
         const Lock = ({ size = 24, className = "" }) => (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         );
 
-        // --- メインアプリケーション ---
+        // --- 設定値 ---
         const MAX_HP = 100;
-        
-        // ★パスワード設定 (ここを変更すれば合言葉が変わります)
         const SECRET_PASSWORD = "1234";
 
-        // ステージ定義
         const STAGES = [
-            { id: 'fulfillment', label: '充実・成長', color: 'bg-red-400', textColor: 'text-gray-900', angle: -90 }, // 12時
-            { id: 'wavering', label: '揺らぎ・迷い', color: 'bg-orange-300', textColor: 'text-gray-900', angle: -30 }, // 2時
-            { id: 'conflict', label: '葛藤・抵抗', sub: '(怒りと対立)', color: 'bg-yellow-300', textColor: 'text-gray-900', angle: 30 }, // 4時
-            { id: 'giving_up', label: '諦め・適応', color: 'bg-green-300', textColor: 'text-gray-900', angle: 90 }, // 6時
-            { id: 'quiet_quitting', label: '静かな退職', color: 'bg-teal-300', textColor: 'text-gray-900', angle: 120 }, // 7時
-            { id: 'indifference', label: '無関心', color: 'bg-blue-300', textColor: 'text-gray-900', angle: 150 }, // 8時
-            { id: 'resignation', label: '退職・転出', color: 'bg-purple-400', textColor: 'text-gray-900', angle: 210 }, // 10時
+            { id: 'fulfillment', label: '充実・成長', color: 'bg-red-400', textColor: 'text-gray-900', angle: -90 },
+            { id: 'wavering', label: '揺らぎ・迷い', color: 'bg-orange-300', textColor: 'text-gray-900', angle: -30 },
+            { id: 'conflict', label: '葛藤・抵抗', sub: '(怒りと対立)', color: 'bg-yellow-300', textColor: 'text-gray-900', angle: 30 },
+            { id: 'giving_up', label: '諦め・適応', color: 'bg-green-300', textColor: 'text-gray-900', angle: 90 },
+            { id: 'quiet_quitting', label: '静かな退職', color: 'bg-teal-300', textColor: 'text-gray-900', angle: 120 },
+            { id: 'indifference', label: '無関心', color: 'bg-blue-300', textColor: 'text-gray-900', angle: 150 },
+            { id: 'resignation', label: '退職・転出', color: 'bg-purple-400', textColor: 'text-gray-900', angle: 210 },
         ];
 
-        // イベント定義
         const EVENT_GROUPS = [
             {
                 title: "プラスの出来事 (回復・獲得)",
                 type: "positive",
                 baseColor: "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800",
                 events: [
-                { 
-                    label: "小: 承認・サポート", 
-                    desc: "対話・ケア",
-                    effects: { sysFairness: 0, intFairness: 10, autonomy: 0, competence: 5, resource: 10, energy: 5 } 
-                },
-                { 
-                    label: "中: 役割・裁量付与", 
-                    desc: "期待・信頼",
-                    effects: { sysFairness: 5, intFairness: 5, autonomy: 15, competence: 10, resource: 5, energy: -5 } 
-                },
-                { 
-                    label: "大: 昇進・制度改善", 
-                    desc: "処遇・環境",
-                    effects: { sysFairness: 15, intFairness: 5, autonomy: 5, competence: 10, resource: 10, energy: 10 } 
-                },
+                    { label: "小: 承認・サポート", desc: "対話・ケア", effects: { sysFairness: 0, intFairness: 10, autonomy: 0, competence: 5, resource: 10, energy: 5 } },
+                    { label: "中: 役割・裁量付与", desc: "期待・信頼", effects: { sysFairness: 5, intFairness: 5, autonomy: 15, competence: 10, resource: 5, energy: -5 } },
+                    { label: "大: 昇進・制度改善", desc: "処遇・環境", effects: { sysFairness: 15, intFairness: 5, autonomy: 5, competence: 10, resource: 10, energy: 10 } },
                 ]
             },
             {
@@ -97,28 +80,16 @@
                 type: "negative",
                 baseColor: "bg-red-50 hover:bg-red-100 border-red-200 text-red-800",
                 events: [
-                { 
-                    label: "小: 疲労・停滞", 
-                    desc: "ルーチン・疲れ",
-                    effects: { sysFairness: 0, intFairness: 0, autonomy: -5, competence: -5, resource: -5, energy: -10 } 
-                },
-                { 
-                    label: "中: 不信・不満", 
-                    desc: "評価・人間関係",
-                    effects: { sysFairness: -10, intFairness: -15, autonomy: -5, competence: -5, resource: -15, energy: -5 } 
-                },
-                { 
-                    label: "大: 葛藤・枯渇", 
-                    desc: "理不尽・過重労働",
-                    effects: { sysFairness: -10, intFairness: -20, autonomy: -10, competence: -10, resource: -20, energy: -20 } 
-                },
+                    { label: "小: 疲労・停滞", desc: "ルーチン・疲れ", effects: { sysFairness: 0, intFairness: 0, autonomy: -5, competence: -5, resource: -5, energy: -10 } },
+                    { label: "中: 不信・不満", desc: "評価・人間関係", effects: { sysFairness: -10, intFairness: -15, autonomy: -5, competence: -5, resource: -15, energy: -5 } },
+                    { label: "大: 葛藤・枯渇", desc: "理不尽・過重労働", effects: { sysFairness: -10, intFairness: -20, autonomy: -10, competence: -10, resource: -20, energy: -20 } },
                 ]
             }
         ];
 
-        function ParamMini({ label, value, color, trackColor = "bg-gray-200", textColor = "text-gray-600" }) {
-            return (
-                <div className="flex flex-col w-full">
+        // --- サブコンポーネント ---
+        const ParamMini = ({ label, value, color, trackColor = "bg-gray-200", textColor = "text-gray-600" }) => (
+            <div className="flex flex-col w-full">
                 <div className="flex justify-between items-center leading-none mb-0.5">
                     <span className={`text-[9px] font-bold ${textColor} origin-left whitespace-nowrap`}>{label}</span>
                     <span className={`text-[9px] font-mono ${textColor}`}>{value}</span>
@@ -126,14 +97,12 @@
                 <div className={`h-1.5 w-full ${trackColor} rounded-full overflow-hidden`}>
                     <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${value}%` }} />
                 </div>
-                </div>
-            );
-        }
+            </div>
+        );
 
-        // --- ログイン画面コンポーネント ---
-        function LoginScreen({ onLogin }) {
-            const [input, setInput] = React.useState("");
-            const [error, setError] = React.useState(false);
+        const LoginScreen = ({ onLogin }) => {
+            const [input, setInput] = useState("");
+            const [error, setError] = useState(false);
 
             const handleSubmit = (e) => {
                 e.preventDefault();
@@ -152,53 +121,157 @@
                         </div>
                         <h2 className="text-lg font-bold text-gray-700 mb-2">限定アクセス</h2>
                         <p className="text-xs text-gray-500 mb-6">閲覧用のパスワードを入力してください</p>
-                        
                         <input 
                             type="password" 
                             value={input}
-                            onChange={(e) => {
-                                setInput(e.target.value);
-                                setError(false);
-                            }}
+                            onChange={(e) => { setInput(e.target.value); setError(false); }}
                             placeholder="パスワード"
                             className="w-full p-3 rounded-lg border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-center"
                             autoFocus
                         />
-                        
                         {error && <p className="text-red-500 text-xs mb-4 font-bold">パスワードが間違っています</p>}
-                        
-                        <button 
-                            type="submit" 
-                            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors"
-                        >
-                            解除
-                        </button>
+                        <button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors">解除</button>
                     </form>
+                </div>
+            );
+        };
+
+        // --- メインコンポーネント ---
+        function App() {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [params, setParams] = useState({
+                sysFairness: 80, intFairness: 80, autonomy: 80, competence: 80, resource: 80, energy: 80,
+            });
+            const [currentStage, setCurrentStage] = useState('fulfillment');
+            const [logs, setLogs] = useState([]);
+
+            useEffect(() => {
+                const avg = Object.values(params).reduce((a, b) => a + b, 0) / 6;
+                let nextStage = 'fulfillment';
+                if (avg >= 85) nextStage = 'fulfillment';
+                else if (avg >= 70) nextStage = 'wavering';
+                else if (avg >= 55) nextStage = 'conflict';
+                else if (avg >= 40) nextStage = 'giving_up';
+                else if (avg >= 25) nextStage = 'quiet_quitting';
+                else if (avg >= 10) nextStage = 'indifference';
+                else nextStage = 'resignation';
+                setCurrentStage(nextStage);
+            }, [params]);
+
+            const updateParams = (effects) => {
+                setParams(prev => {
+                    const newParams = { ...prev };
+                    Object.keys(effects).forEach(key => {
+                        newParams[key] = Math.max(0, Math.min(MAX_HP, prev[key] + effects[key]));
+                    });
+                    return newParams;
+                });
+            };
+
+            const handleEvent = (event) => {
+                updateParams(event.effects);
+                const totalEffect = Object.values(event.effects).reduce((a, b) => a + b, 0);
+                const sign = totalEffect >= 0 ? '+' : '';
+                setLogs(prev => [{ text: event.label, desc: event.desc, effect: `${sign}${totalEffect}`, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 3));
+            };
+
+            const reset = () => {
+                setParams({ sysFairness: 80, intFairness: 80, autonomy: 80, competence: 80, resource: 80, energy: 80 });
+                setLogs([]);
+            };
+
+            const getPosition = (angle, radius) => {
+                const radian = (angle * Math.PI) / 180;
+                return { left: `${50 + Math.cos(radian) * radius}%`, top: `${50 + Math.sin(radian) * radius}%` };
+            };
+
+            if (!isLoggedIn) return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
+
+            return (
+                <div className="h-screen bg-gray-50 text-gray-800 font-sans p-2 flex flex-col overflow-hidden">
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+                        {/* 左: シミュレーター */}
+                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-md flex items-center justify-center p-4 min-h-[300px] overflow-hidden">
+                            <div className="relative shrink-0 mx-auto" style={{ width: 'min(500px, 80vmin)', height: 'min(500px, 80vmin)' }}>
+                                {/* 中心: 固定要素 */}
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[58%] h-[58%] bg-gray-600 rounded-full z-20 flex items-center justify-center p-6 shadow-inner ring-4 ring-gray-100">
+                                    <div className="w-full h-full flex flex-col justify-center gap-2">
+                                        <ParamMini label="公平性(制度的)" value={params.sysFairness} color="bg-blue-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="公平性(対人的)" value={params.intFairness} color="bg-indigo-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="裁量感" value={params.autonomy} color="bg-green-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="有用感" value={params.competence} color="bg-emerald-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="心理的リソース(不可)" value={params.resource} color="bg-pink-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="身体的エネルギー" value={params.energy} color="bg-orange-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                    </div>
+                                </div>
+                                {/* 背景円 */}
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[72%] h-[72%] bg-gray-100 rounded-full z-10 border-2 border-dashed border-gray-300"></div>
+                                {/* 外周ステージ */}
+                                {STAGES.map((stage) => {
+                                    const pos = getPosition(stage.angle, 44);
+                                    const isActive = currentStage === stage.id;
+                                    return (
+                                        <div key={stage.id} className={`absolute transform -translate-x-1/2 -translate-y-1/2 rounded-full flex flex-col items-center justify-center text-center z-30 w-20 h-20 md:w-24 md:h-24 ${stage.color} ${stage.textColor} ${isActive ? 'ring-4 ring-offset-2 ring-gray-600 z-40' : 'opacity-80 grayscale-[0.3]'} transition-all duration-300`} style={{ left: pos.left, top: pos.top }}>
+                                            <span className="font-bold text-[10px] md:text-xs leading-tight px-1 block">{stage.label}</span>
+                                            {stage.sub && <span className="text-[8px] md:text-[9px] leading-tight block mt-0.5">{stage.sub}</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* 右: 操作パネル */}
+                        <div className="flex flex-col gap-3 min-h-0">
+                            <div className="bg-white p-3 rounded-2xl shadow-md border-l-4 border-gray-700 flex-none">
+                                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Current State</h3>
+                                <div className="flex justify-between items-end">
+                                    <div className="text-lg font-bold text-gray-800">{STAGES.find(s => s.id === currentStage)?.label}</div>
+                                    <button onClick={reset} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-gray-100 mb-0.5"><RotateCcw size={12} /> リセット</button>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5">
+                                    <div className="bg-gray-800 h-1 rounded-full transition-all duration-500" style={{ width: `${Object.values(params).reduce((a,b)=>a+b,0)/6}%`}}></div>
+                                </div>
+                            </div>
+                            <div className="bg-white p-3 rounded-2xl shadow-md flex-1 flex flex-col min-h-0 overflow-hidden">
+                                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                                    {EVENT_GROUPS.map((group, gIdx) => (
+                                        <div key={gIdx}>
+                                            <div className="flex items-center gap-1.5 mb-2">
+                                                {group.type === 'positive' ? <PlusCircle size={14} className="text-blue-500"/> : <MinusCircle size={14} className="text-red-500"/>}
+                                                <h4 className="text-xs font-bold text-gray-600">{group.title}</h4>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-1.5">
+                                                {group.events.map((evt, eIdx) => (
+                                                    <button key={eIdx} onClick={() => handleEvent(evt)} className={`w-full px-3 py-2 rounded-lg border transition-all duration-150 flex justify-between items-center group relative overflow-hidden ${group.baseColor}`}>
+                                                        <div className="text-left z-10"><div className="font-bold text-xs">{evt.label}</div><div className="text-[10px] opacity-70 mt-0.5">{evt.desc}</div></div>
+                                                        <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10">{group.type === 'positive' ? '+' : ''}{Object.values(evt.effects).reduce((a, b) => a + b, 0)}</div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-3 pt-2 border-t flex-none">
+                                    <h4 className="text-[10px] font-bold text-gray-400 mb-1">Log</h4>
+                                    <ul className="space-y-1">
+                                        {logs.length === 0 && <li className="text-[10px] text-gray-300">イベント待ち...</li>}
+                                        {logs.map((log, i) => (
+                                            <li key={i} className="text-[10px] text-gray-600 flex justify-between animate-fade-in items-center">
+                                                <div className="truncate mr-2 flex items-center gap-1"><span className={`w-1 h-1 rounded-full ${log.effect.includes('+') ? 'bg-blue-400' : 'bg-red-400'}`}></span>{log.text}</div>
+                                                <span className="text-gray-400 flex-none text-[9px]">{log.time}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             );
         }
 
-        function App() {
-            // ログイン状態管理
-            const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-            
-            const [params, setParams] = React.useState({
-                sysFairness: 80, // 公平性(制度的)
-                intFairness: 80, // 公平性(対人的)
-                autonomy: 80,    // 裁量感
-                competence: 80,  // 有用感
-                resource: 80,    // 心理的リソース(不可)
-                energy: 80,      // 身体的エネルギー
-            });
-
-            const [currentStage, setCurrentStage] = React.useState('fulfillment');
-            const [logs, setLogs] = React.useState([]);
-
-            React.useEffect(() => {
-                const avg = Object.values(params).reduce((a, b) => a + b, 0) / 6;
-                let nextStage = 'fulfillment';
-
-                // 平均スコアに基づいて段階的に時計回りに遷移
-                if (avg >= 85) {
-                    nextStage = 'fulfillment';
-                } else if
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
