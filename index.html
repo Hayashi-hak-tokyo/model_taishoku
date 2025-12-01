@@ -247,7 +247,7 @@
                         {/* 右: 操作パネル */}
                         <div className="flex flex-col gap-3 min-h-0">
                             <div className="bg-white p-3 rounded-2xl shadow-md border-l-4 border-gray-700 flex-none">
-                                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Current State</h3>
+                                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Current Status</h3>
                                 <div className="flex justify-between items-end">
                                     <div className="text-lg font-bold text-gray-800">{STAGES.find(s => s.id === currentStage)?.label}</div>
                                     <button onClick={reset} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-gray-100 mb-0.5"><RotateCcw size={12} /> リセット</button>
