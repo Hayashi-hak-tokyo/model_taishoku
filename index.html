@@ -6,11 +6,27 @@
     <meta name="robots" content="noindex, nofollow">
     <title>退職プロセス・シミュレーター</title>
     
-    <!-- React, ReactDOM, Babel, Tailwindの読み込み -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- エラーを画面に表示する仕掛け -->
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            const errorBox = document.getElementById('error-box');
+            if (errorBox) {
+                errorBox.style.display = 'block';
+                errorBox.innerHTML += `<div><strong>Error:</strong> ${msg}<br><small>${url}:${line}</small></div><hr>`;
+            }
+            return false;
+        };
+    </script>
+
+    <!-- Tailwind CSS (デザイン用) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React, ReactDOM (CDNを変更して安定化) -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (JSX変換用) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
     <style>
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -19,14 +35,18 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         @keyframes fade-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
+        #error-box { display: none; background: #fee2e2; color: #991b1b; padding: 1rem; margin: 1rem; border-radius: 0.5rem; border: 1px solid #f87171; font-family: monospace; font-size: 0.8rem; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans h-screen overflow-hidden">
 
+    <!-- エラー表示エリア -->
+    <div id="error-box"></div>
+
     <!-- ここにReactアプリが描画されます。描画前は「読み込み中...」と出ます -->
     <div id="root" class="flex items-center justify-center h-full text-gray-500 font-bold">
         システム読み込み中...<br>
-        (画面が白いままの場合は再読み込みしてください)
+        <span class="text-xs font-normal mt-2">(画面が白いままの場合は再読み込みしてください)</span>
     </div>
 
     <script type="text/babel">
@@ -148,13 +168,16 @@
             useEffect(() => {
                 const avg = Object.values(params).reduce((a, b) => a + b, 0) / 6;
                 let nextStage = 'fulfillment';
-                if (avg >= 85) nextStage = 'fulfillment';
-                else if (avg >= 70) nextStage = 'wavering';
-                else if (avg >= 55) nextStage = 'conflict';
-                else if (avg >= 40) nextStage = 'giving_up';
-                else if (avg >= 25) nextStage = 'quiet_quitting';
-                else if (avg >= 10) nextStage = 'indifference';
-                else nextStage = 'resignation';
+                
+                // ロジック調整：HPが残っていても退職フェーズに行きやすくする
+                if (avg >= 92) nextStage = 'fulfillment';      // 92以上で充実（以前は85）
+                else if (avg >= 80) nextStage = 'wavering';    // 80-92で迷い（以前は70-85）
+                else if (avg >= 65) nextStage = 'conflict';    // 65-80で葛藤（以前は55-70）
+                else if (avg >= 55) nextStage = 'giving_up';   // 55-65で諦め（以前は40-55）
+                else if (avg >= 45) nextStage = 'quiet_quitting'; // 45-55で静かな退職（以前は25-40）
+                else if (avg >= 35) nextStage = 'indifference'; // 35-45で無関心（以前は10-25）
+                else nextStage = 'resignation';                 // 35未満で退職（以前は10未満）
+                
                 setCurrentStage(nextStage);
             }, [params]);
 
