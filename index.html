@@ -91,7 +91,8 @@
                 baseColor: "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800",
                 events: [
                     { label: "小: 承認・サポート", desc: "対話・ケア", effects: { sysFairness: 0, intFairness: 10, autonomy: 0, competence: 5, resource: 10, energy: 5 } },
-                    { label: "中: 役割・裁量付与", desc: "期待・信頼", effects: { sysFairness: 5, intFairness: 5, autonomy: 15, competence: 10, resource: 5, energy: -5 } },
+                    // 修正: energyを -5 から 5 に変更
+                    { label: "中: 役割・裁量付与", desc: "期待・信頼", effects: { sysFairness: 5, intFairness: 5, autonomy: 15, competence: 10, resource: 5, energy: 5 } },
                     { label: "大: 昇進・制度改善", desc: "処遇・環境", effects: { sysFairness: 15, intFairness: 5, autonomy: 5, competence: 10, resource: 10, energy: 10 } },
                 ]
             },
