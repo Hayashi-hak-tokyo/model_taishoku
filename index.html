@@ -74,14 +74,15 @@
         const MAX_HP = 100;
         const SECRET_PASSWORD = "1234";
 
+        // ★色をサンプル画像から抽出したHEXコードに変更
         const STAGES = [
-            { id: 'fulfillment', label: '充実・成長', color: 'bg-red-400', textColor: 'text-gray-900', angle: -90 },
-            { id: 'wavering', label: '揺らぎ・迷い', color: 'bg-orange-300', textColor: 'text-gray-900', angle: -30 },
-            { id: 'conflict', label: '葛藤・抵抗', sub: '(怒りと対立)', color: 'bg-yellow-300', textColor: 'text-gray-900', angle: 30 },
-            { id: 'giving_up', label: '諦め・適応', color: 'bg-green-300', textColor: 'text-gray-900', angle: 90 },
-            { id: 'quiet_quitting', label: '静かな退職', color: 'bg-teal-300', textColor: 'text-gray-900', angle: 120 },
-            { id: 'indifference', label: '無関心', color: 'bg-blue-300', textColor: 'text-gray-900', angle: 150 },
-            { id: 'resignation', label: '退職・転出', color: 'bg-purple-400', textColor: 'text-gray-900', angle: 210 },
+            { id: 'fulfillment', label: '充実・成長', color: 'bg-[#E95438]', textColor: 'text-gray-900', angle: -90 }, // 朱赤
+            { id: 'wavering', label: '揺らぎ・迷い', color: 'bg-[#F7A35C]', textColor: 'text-gray-900', angle: -30 }, // オレンジ
+            { id: 'conflict', label: '葛藤・抵抗', sub: '(怒りと対立)', color: 'bg-[#FCD260]', textColor: 'text-gray-900', angle: 30 }, // 黄色
+            { id: 'giving_up', label: '諦め・適応', color: 'bg-[#8DD681]', textColor: 'text-gray-900', angle: 90 }, // 緑
+            { id: 'quiet_quitting', label: '静かな退職', color: 'bg-[#83DBC9]', textColor: 'text-gray-900', angle: 120 }, // 青緑
+            { id: 'indifference', label: '無関心', color: 'bg-[#5CAAF6]', textColor: 'text-gray-900', angle: 150 }, // 青
+            { id: 'resignation', label: '退職・転出', color: 'bg-[#7E60F5]', textColor: 'text-gray-900', angle: 210 }, // 紫
         ];
 
         const EVENT_GROUPS = [
@@ -170,13 +171,13 @@
                 let nextStage = 'fulfillment';
                 
                 // ロジック調整：HPが残っていても退職フェーズに行きやすくする
-                if (avg >= 92) nextStage = 'fulfillment';      // 92以上で充実（以前は85）
-                else if (avg >= 80) nextStage = 'wavering';    // 80-92で迷い（以前は70-85）
-                else if (avg >= 65) nextStage = 'conflict';    // 65-80で葛藤（以前は55-70）
-                else if (avg >= 55) nextStage = 'giving_up';   // 55-65で諦め（以前は40-55）
-                else if (avg >= 45) nextStage = 'quiet_quitting'; // 45-55で静かな退職（以前は25-40）
-                else if (avg >= 35) nextStage = 'indifference'; // 35-45で無関心（以前は10-25）
-                else nextStage = 'resignation';                 // 35未満で退職（以前は10未満）
+                if (avg >= 92) nextStage = 'fulfillment';      
+                else if (avg >= 80) nextStage = 'wavering';    
+                else if (avg >= 65) nextStage = 'conflict';    
+                else if (avg >= 55) nextStage = 'giving_up';   
+                else if (avg >= 45) nextStage = 'quiet_quitting'; 
+                else if (avg >= 35) nextStage = 'indifference'; 
+                else nextStage = 'resignation';                 
                 
                 setCurrentStage(nextStage);
             }, [params]);
@@ -217,8 +218,8 @@
                         <div className="lg:col-span-2 bg-white rounded-2xl shadow-md flex items-center justify-center p-4 min-h-[300px] overflow-hidden">
                             <div className="relative shrink-0 mx-auto" style={{ width: 'min(500px, 80vmin)', height: 'min(500px, 80vmin)' }}>
                                 {/* 中心: 固定要素 */}
-                                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[58%] h-[58%] bg-gray-600 rounded-full z-20 flex items-center justify-center p-6 shadow-inner ring-4 ring-gray-100">
-                                    <div class="w-full h-full flex flex-col justify-center gap-2">
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[58%] h-[58%] bg-gray-600 rounded-full z-20 flex items-center justify-center p-6 shadow-inner ring-4 ring-gray-100">
+                                    <div className="w-full h-full flex flex-col justify-center gap-2">
                                         <ParamMini label="公平性(制度的)" value={params.sysFairness} color="bg-blue-400" trackColor="bg-gray-700" textColor="text-gray-100" />
                                         <ParamMini label="公平性(対人的)" value={params.intFairness} color="bg-indigo-400" trackColor="bg-gray-700" textColor="text-gray-100" />
                                         <ParamMini label="裁量感" value={params.autonomy} color="bg-green-400" trackColor="bg-gray-700" textColor="text-gray-100" />
