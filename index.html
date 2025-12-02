@@ -40,72 +40,134 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans h-screen overflow-hidden">
 
-    <!-- エラー表示エリア -->
     <div id="error-box"></div>
 
-    <!-- ここにReactアプリが描画されます。描画前は「読み込み中...」と出ます -->
     <div id="root" class="flex items-center justify-center h-full text-gray-500 font-bold">
         システム読み込み中...<br>
         <span class="text-xs font-normal mt-2">(画面が白いままの場合は再読み込みしてください)</span>
     </div>
 
     <script type="text/babel">
-        // --- Reactの機能を取り出し ---
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
 
-        // --- アイコンコンポーネント ---
-        const RotateCcw = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
-        );
-        const Activity = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        );
-        const PlusCircle = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-        );
-        const MinusCircle = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
-        );
-        const Lock = ({ size = 24, className = "" }) => (
-            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-        );
+        // --- アイコン ---
+        const RotateCcw = ({ size = 24, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>;
+        const PlusCircle = ({ size = 24, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>;
+        const MinusCircle = ({ size = 24, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>;
+        const Lock = ({ size = 24, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+        const ChevronDown = ({ size = 24, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9l6 6 6-6"/></svg>;
 
         // --- 設定値 ---
         const MAX_HP = 100;
         const SECRET_PASSWORD = "1234";
 
-        // ★色をサンプル画像から抽出したHEXコードに変更
         const STAGES = [
-            { id: 'fulfillment', label: '充実・成長', color: 'bg-[#E95438]', textColor: 'text-gray-900', angle: -90 }, // 朱赤
-            { id: 'wavering', label: '揺らぎ・迷い', color: 'bg-[#F7A35C]', textColor: 'text-gray-900', angle: -30 }, // オレンジ
-            { id: 'conflict', label: '葛藤・抵抗', sub: '(怒りと対立)', color: 'bg-[#FCD260]', textColor: 'text-gray-900', angle: 30 }, // 黄色
-            { id: 'giving_up', label: '諦め・適応', color: 'bg-[#8DD681]', textColor: 'text-gray-900', angle: 90 }, // 緑
-            { id: 'quiet_quitting', label: '静かな退職', color: 'bg-[#83DBC9]', textColor: 'text-gray-900', angle: 120 }, // 青緑
-            { id: 'indifference', label: '無関心', color: 'bg-[#5CAAF6]', textColor: 'text-gray-900', angle: 150 }, // 青
-            { id: 'resignation', label: '退職・転出', color: 'bg-[#7E60F5]', textColor: 'text-gray-900', angle: 210 }, // 紫
+            { id: 'fulfillment', label: '充実・成長', color: 'bg-[#E95438]', textColor: 'text-gray-900', angle: -90 },
+            { id: 'wavering', label: '揺らぎ・迷い', color: 'bg-[#F7A35C]', textColor: 'text-gray-900', angle: -30 },
+            { id: 'conflict', label: '葛藤・抵抗', sub: '(怒りと対立)', color: 'bg-[#FCD260]', textColor: 'text-gray-900', angle: 30 },
+            { id: 'giving_up', label: '諦め・適応', color: 'bg-[#8DD681]', textColor: 'text-gray-900', angle: 90 },
+            { id: 'quiet_quitting', label: '静かな退職', color: 'bg-[#83DBC9]', textColor: 'text-gray-900', angle: 120 },
+            { id: 'indifference', label: '無関心', color: 'bg-[#5CAAF6]', textColor: 'text-gray-900', angle: 150 },
+            { id: 'resignation', label: '退職・転出', color: 'bg-[#7E60F5]', textColor: 'text-gray-900', angle: 210 },
         ];
 
-        const EVENT_GROUPS = [
-            {
-                title: "プラスの出来事 (回復・獲得)",
-                type: "positive",
-                baseColor: "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800",
-                events: [
-                    { label: "出来事A", desc: "対話・ケア", effects: { sysFairness: 0, intFairness: 15, autonomy: 0, competence: 5, resource: 10, energy: 5 } },
-                    { label: "出来事B", desc: "期待・信頼", effects: { sysFairness: 5, intFairness: 5, autonomy: 15, competence: 10, resource: 5, energy: 5 } },
-                    { label: "出来事C", desc: "処遇・環境", effects: { sysFairness: 15, intFairness: 5, autonomy: 5, competence: 10, resource: 10, energy: 10 } },
-                ]
-            },
-            {
-                title: "マイナスの出来事 (負荷・喪失)",
-                type: "negative",
-                baseColor: "bg-red-50 hover:bg-red-100 border-red-200 text-red-800",
-                events: [
-                    { label: "出来事A", desc: "ルーチン・疲れ", effects: { sysFairness: 0, intFairness: 0, autonomy: -5, competence: -5, resource: -5, energy: -10 } },
-                    { label: "出来事B", desc: "評価・人間関係", effects: { sysFairness: -10, intFairness: -15, autonomy: -5, competence: -5, resource: -15, energy: -5 } },
-                    { label: "出来事C", desc: "理不尽・過重労働", effects: { sysFairness: -10, intFairness: -20, autonomy: -10, competence: -10, resource: -20, energy: -20 } },
-                ]
-            }
+        // --- データセット (スプレッドシートから移植) ---
+        // category: 大カテゴリ(中カテゴリー), label: 小カテゴリー, desc: コミュニケーション媒介, type: pos/neg
+        // effects: [制度, 対人, 裁量, 有用, 負荷, エネ]
+        const RAW_EVENTS = [
+            // 制度・運用
+            { cat: "制度・運用", label: "評価制度・給与体系", desc: "年功序列の給与への納得感", type: "pos", eff: [4,3,2,2,1,0] },
+            { cat: "制度・運用", label: "評価制度・給与体系", desc: "実力評価の不明確さと不満", type: "neg", eff: [-4,-3,-2,-2,-1,0] },
+            { cat: "制度・運用", label: "安定した高待遇", desc: "安定した高給与の実感", type: "pos", eff: [3,0,0,1,1,2] },
+            { cat: "制度・運用", label: "安定した高待遇", desc: "給与格差と将来不安", type: "neg", eff: [-3,0,0,-1,-1,-2] },
+            { cat: "制度・運用", label: "手厚い手当", desc: "本社勤務の手厚い手当", type: "pos", eff: [3,0,0,1,1,2] },
+            { cat: "制度・運用", label: "手厚い手当", desc: "現場への手当不足・本社優遇", type: "neg", eff: [-3,0,0,-1,-1,-2] },
+            { cat: "制度・運用", label: "福利厚生(住宅)", desc: "家賃補助・借上社宅の恩恵", type: "pos", eff: [4,2,1,0,1,2] },
+            { cat: "制度・運用", label: "福利厚生(住宅)", desc: "制度の形骸化・利用しづらさ", type: "neg", eff: [-2,-1,0,-1,-2,-2] },
+            { cat: "制度・運用", label: "福利厚生(食事)", desc: "ちょい飲み・昼食補助", type: "pos", eff: [6,2,1,0,1,2] },
+            { cat: "制度・運用", label: "福利厚生(食事)", desc: "補助の縮小・実感のなさ", type: "neg", eff: [-2,-1,0,-1,-2,-2] },
+            { cat: "制度・運用", label: "福利厚生(格差)", desc: "箇所との福利厚生格差なし", type: "pos", eff: [6,2,1,0,1,2] },
+            { cat: "制度・運用", label: "福利厚生(格差)", desc: "本社と工場の格差への不満", type: "neg", eff: [-2,-1,0,-1,-2,-2] },
+            { cat: "制度・運用", label: "勤務・休暇制度", desc: "フレックス・在宅・年休", type: "pos", eff: [6,2,0,2,0,4] },
+            { cat: "制度・運用", label: "勤務・休暇制度", desc: "制度不全・特定へのしわ寄せ", type: "neg", eff: [-2,0,-2,0,-4,-3] },
+            { cat: "制度・運用", label: "長時間労働対応", desc: "適切な労務管理", type: "pos", eff: [4,2,0,2,0,4] },
+            { cat: "制度・運用", label: "長時間労働対応", desc: "夜間休日対応・常態化", type: "neg", eff: [-2,0,-2,0,-4,-3] },
+            { cat: "制度・運用", label: "異動・転勤", desc: "海外転勤等の希望実現", type: "pos", eff: [4,2,2,2,2,3] },
+            { cat: "制度・運用", label: "異動・転勤", desc: "会社都合の急な転勤", type: "neg", eff: [-2,-2,-2,-2,-3,0] },
+            { cat: "制度・運用", label: "キャリア開発", desc: "希望通りのキャリアパス", type: "pos", eff: [5,0,0,3,4,2] },
+            { cat: "制度・運用", label: "キャリア開発", desc: "希望との乖離・将来像欠如", type: "neg", eff: [0,0,-3,-4,-2,0] },
+            { cat: "制度・運用", label: "評価の透明性", desc: "納得感のある評価", type: "pos", eff: [5,0,0,3,4,2] },
+            { cat: "制度・運用", label: "評価の透明性", desc: "上司の好き嫌い・不透明", type: "neg", eff: [0,0,-3,-4,-2,0] },
+            { cat: "制度・運用", label: "育成姿勢", desc: "長期的な育成視点", type: "pos", eff: [5,0,0,3,4,2] },
+            { cat: "制度・運用", label: "育成姿勢", desc: "指導不足・ロールモデル不在", type: "neg", eff: [0,0,-3,-4,-2,0] },
+            { cat: "制度・運用", label: "研修支援", desc: "充実した研修・自己啓発", type: "pos", eff: [5,0,0,3,4,2] },
+            { cat: "制度・運用", label: "研修支援", desc: "制度の形骸化・説明不足", type: "neg", eff: [0,0,-3,-4,-2,0] },
+            { cat: "制度・運用", label: "業務権限", desc: "プロセスへの権限委譲", type: "pos", eff: [2,0,0,0,2,12] }, // 裁量が大きい
+            { cat: "制度・運用", label: "業務権限", desc: "意思決定の遅さ・プロセス多", type: "neg", eff: [-3,-3,-3,0,0,0] }, // 裁量減
+            { cat: "制度・運用", label: "役割責任", desc: "明確な役割・責任", type: "pos", eff: [2,0,0,0,2,4] },
+            { cat: "制度・運用", label: "役割責任", desc: "責任所在の曖昧さ・押し付け", type: "neg", eff: [-3,-3,-3,0,0,0] },
+
+            // 文化
+            { cat: "文化", label: "組織風土", desc: "古き良き昭和的な社風", type: "pos", eff: [0,0,3,3,0,4] },
+            { cat: "文化", label: "組織風土", desc: "古い体質の弊害・思考停止", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "トップダウン", desc: "強力なリーダーシップ", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "トップダウン", desc: "過度な圧力・萎縮", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "一山一家", desc: "家族的な連帯感", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "一山一家", desc: "ウェットすぎる人間関係", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "飲み会文化", desc: "飲み会での解決・融和", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "飲み会文化", desc: "断れない空気・ムラ社会", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "挑戦文化", desc: "挑戦を許容する姿勢", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "挑戦文化", desc: "言ったもん負けの空気", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "察する文化", desc: "阿吽の呼吸", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "察する文化", desc: "フィードバック不足", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "責任追及", desc: "問題解決への集中", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "責任追及", desc: "犯人探し・失敗への叱責", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "エリート層", desc: "優秀な人材の増加", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "エリート層", desc: "学歴・エリート主義の弊害", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "縦割り", desc: "ラインの結びつきの強さ", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "縦割り", desc: "全体最適の阻害・セクショナリズム", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "チームワーク", desc: "部署を超えた協力", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "チームワーク", desc: "同調圧力・過剰な協調", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "情報共有", desc: "混乱を避ける慎重さ", type: "pos", eff: [0,0,3,3,0,6] },
+            { cat: "文化", label: "情報共有", desc: "隠蔽・事なかれ主義", type: "neg", eff: [-4,0,0,-3,0,0] },
+            { cat: "文化", label: "コンプラ", desc: "高いコンプライアンス意識", type: "pos", eff: [0,0,0,0,3,6] },
+            { cat: "文化", label: "コンプラ", desc: "言行不一致・不信感", type: "neg", eff: [-4,0,0,0,-4,0] },
+
+            // バリューチェーン
+            { cat: "バリューチェーン", label: "事業特性", desc: "上流と下流の文化差", type: "pos", eff: [2,0,0,0,0,3] },
+            { cat: "バリューチェーン", label: "事業特性", desc: "文化差による分断", type: "neg", eff: [-3,0,0,0,-3,0] },
+            { cat: "バリューチェーン", label: "事業の強み", desc: "資源からの一貫性", type: "pos", eff: [2,0,0,0,2,1] },
+            { cat: "バリューチェーン", label: "事業の強み", desc: "ポテンシャルの未活用", type: "neg", eff: [-2,-1,0,0,-3,0] },
+            { cat: "バリューチェーン", label: "投資の偏り", desc: "成長事業と基盤事業", type: "pos", eff: [3,0,0,0,0,3] },
+            { cat: "バリューチェーン", label: "投資の偏り", desc: "不公平感・将来不安", type: "neg", eff: [-2,-3,0,0,-3,0] },
+            { cat: "バリューチェーン", label: "事業の活発さ", desc: "開発のスピード感", type: "pos", eff: [4,0,0,2,0,3] },
+            { cat: "バリューチェーン", label: "事業の活発さ", desc: "他事業の軽視感", type: "neg", eff: [-3,-4,0,0,-3,0] },
+            { cat: "バリューチェーン", label: "部門間連携", desc: "他事業所との共有", type: "pos", eff: [0,0,0,0,2,6] },
+            { cat: "バリューチェーン", label: "部門間連携", desc: "相互理解不足・分断", type: "neg", eff: [0,-3,0,0,-2,0] },
+
+            // 業界構造・事情
+            { cat: "業界構造・事情", label: "業界地位", desc: "安定性と成長ポテンシャル", type: "pos", eff: [2,0,0,0,0,2] },
+            { cat: "業界構造・事情", label: "業界地位", desc: "変化への危機感不足", type: "neg", eff: [-2,-1,0,0,-2,0] },
+            { cat: "業界構造・事情", label: "市場地位", desc: "豊富な高シェア製品", type: "pos", eff: [2,0,0,0,0,2] },
+            { cat: "業界構造・事情", label: "市場地位", desc: "次世代の柱不足", type: "neg", eff: [-2,-1,0,0,-2,0] },
+            { cat: "業界構造・事情", label: "外部環境", desc: "市況の影響", type: "pos", eff: [0,0,0,0,0,2] },
+            { cat: "業界構造・事情", label: "外部環境", desc: "市況に振り回される無力感", type: "neg", eff: [0,0,0,0,0,-3] },
+            { cat: "業界構造・事情", label: "社会貢献", desc: "社会的責任の実感", type: "pos", eff: [3,0,0,2,0,0] },
+            { cat: "業界構造・事情", label: "社会貢献", desc: "貢献実感の薄さ", type: "neg", eff: [-4,0,0,0,-4,0] },
+            { cat: "業界構造・事情", label: "経営イベント", desc: "上場・構造改革", type: "pos", eff: [3,0,0,0,0,5] },
+            { cat: "業界構造・事情", label: "経営イベント", desc: "意図不明・不安", type: "neg", eff: [-2,0,0,0,-2,0] },
+
+            // 立地・施設環境
+            { cat: "立地・施設環境", label: "勤務地", desc: "地域の魅力", type: "pos", eff: [2,3,2,0,0,0] },
+            { cat: "立地・施設環境", label: "勤務地", desc: "不便さ・配慮不足", type: "neg", eff: [-2,0,0,0,-2,-2] },
+            { cat: "立地・施設環境", label: "施設格差", desc: "本社施設の近代化", type: "pos", eff: [1,2,3,2,0,0] },
+            { cat: "立地・施設環境", label: "施設格差", desc: "工場の老朽化・格差", type: "neg", eff: [-3,-2,0,0,0,0] },
+            { cat: "立地・施設環境", label: "作業環境", desc: "現場のやりがい", type: "pos", eff: [0,1,0,0,0,0] },
+            { cat: "立地・施設環境", label: "作業環境", desc: "過酷さ・支援不足", type: "neg", eff: [0,0,0,0,-4,-3] },
+            { cat: "立地・施設環境", label: "設備投資", desc: "安全投資の充実", type: "pos", eff: [0,0,0,0,0,0] },
+            { cat: "立地・施設環境", label: "設備投資", desc: "老朽設備の放置", type: "neg", eff: [2,5,0,0,0,0].map(x=>-x) }, // CSVの値が正だったので反転
+            { cat: "立地・施設環境", label: "拠点愛着", desc: "地域・拠点への愛着", type: "pos", eff: [0,0,0,0,0,0] },
+            { cat: "立地・施設環境", label: "拠点愛着", desc: "あきらめ・レッテル", type: "neg", eff: [0,0,0,0,0,0] },
         ];
 
         // --- サブコンポーネント ---
@@ -124,32 +186,13 @@
         const LoginScreen = ({ onLogin }) => {
             const [input, setInput] = useState("");
             const [error, setError] = useState(false);
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                if (input === SECRET_PASSWORD) {
-                    onLogin();
-                } else {
-                    setError(true);
-                }
-            };
-
+            const handleSubmit = (e) => { e.preventDefault(); if (input === SECRET_PASSWORD) { onLogin(); } else { setError(true); } };
             return (
                 <div className="flex items-center justify-center h-screen bg-gray-100 p-4">
                     <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
-                        <div className="flex justify-center mb-4 text-gray-400">
-                            <Lock size={48} />
-                        </div>
+                        <div className="flex justify-center mb-4 text-gray-400"><Lock size={48} /></div>
                         <h2 className="text-lg font-bold text-gray-700 mb-2">限定アクセス</h2>
-                        <p className="text-xs text-gray-500 mb-6">閲覧用のパスワードを入力してください</p>
-                        <input 
-                            type="password" 
-                            value={input}
-                            onChange={(e) => { setInput(e.target.value); setError(false); }}
-                            placeholder="パスワード"
-                            className="w-full p-3 rounded-lg border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-center"
-                            autoFocus
-                        />
+                        <input type="password" value={input} onChange={(e) => { setInput(e.target.value); setError(false); }} placeholder="パスワード" className="w-full p-3 rounded-lg border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-center" autoFocus />
                         {error && <p className="text-red-500 text-xs mb-4 font-bold">パスワードが間違っています</p>}
                         <button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors">解除</button>
                     </form>
@@ -160,17 +203,28 @@
         // --- メインコンポーネント ---
         function App() {
             const [isLoggedIn, setIsLoggedIn] = useState(false);
-            const [params, setParams] = useState({
-                sysFairness: 80, intFairness: 80, autonomy: 80, competence: 80, resource: 80, energy: 80,
-            });
+            const [params, setParams] = useState({ sysFairness: 80, intFairness: 80, autonomy: 80, competence: 80, resource: 80, energy: 80 });
             const [currentStage, setCurrentStage] = useState('fulfillment');
             const [logs, setLogs] = useState([]);
+            
+            // カテゴリ選択用
+            const [selectedCategory, setSelectedCategory] = useState("制度・運用");
+            
+            // カテゴリ一覧作成
+            const categories = useMemo(() => [...new Set(RAW_EVENTS.map(e => e.cat))], []);
+
+            // 選択されたカテゴリのイベント抽出
+            const currentEvents = useMemo(() => {
+                const filtered = RAW_EVENTS.filter(e => e.cat === selectedCategory);
+                return {
+                    pos: filtered.filter(e => e.type === 'pos'),
+                    neg: filtered.filter(e => e.type === 'neg')
+                };
+            }, [selectedCategory]);
 
             useEffect(() => {
                 const avg = Object.values(params).reduce((a, b) => a + b, 0) / 6;
                 let nextStage = 'fulfillment';
-                
-                // ロジック調整：HPが残っていても退職フェーズに行きやすくする
                 if (avg >= 92) nextStage = 'fulfillment';      
                 else if (avg >= 80) nextStage = 'wavering';    
                 else if (avg >= 65) nextStage = 'conflict';    
@@ -178,23 +232,23 @@
                 else if (avg >= 45) nextStage = 'quiet_quitting'; 
                 else if (avg >= 35) nextStage = 'indifference'; 
                 else nextStage = 'resignation';                 
-                
                 setCurrentStage(nextStage);
             }, [params]);
 
-            const updateParams = (effects) => {
+            const updateParams = (effectsArray) => {
                 setParams(prev => {
                     const newParams = { ...prev };
-                    Object.keys(effects).forEach(key => {
-                        newParams[key] = Math.max(0, Math.min(MAX_HP, prev[key] + effects[key]));
+                    const keys = ['sysFairness', 'intFairness', 'autonomy', 'competence', 'resource', 'energy'];
+                    keys.forEach((key, idx) => {
+                        newParams[key] = Math.max(0, Math.min(MAX_HP, prev[key] + effectsArray[idx]));
                     });
                     return newParams;
                 });
             };
 
             const handleEvent = (event) => {
-                updateParams(event.effects);
-                const totalEffect = Object.values(event.effects).reduce((a, b) => a + b, 0);
+                updateParams(event.eff);
+                const totalEffect = event.eff.reduce((a, b) => a + b, 0);
                 const sign = totalEffect >= 0 ? '+' : '';
                 setLogs(prev => [{ text: event.label, desc: event.desc, effect: `${sign}${totalEffect}`, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 3));
             };
@@ -246,6 +300,7 @@
 
                         {/* 右: 操作パネル */}
                         <div className="flex flex-col gap-3 min-h-0">
+                            {/* ステータス */}
                             <div className="bg-white p-3 rounded-2xl shadow-md border-l-4 border-gray-700 flex-none">
                                 <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Current Status</h3>
                                 <div className="flex justify-between items-end">
@@ -256,25 +311,72 @@
                                     <div className="bg-gray-800 h-1 rounded-full transition-all duration-500" style={{ width: `${Object.values(params).reduce((a,b)=>a+b,0)/6}%`}}></div>
                                 </div>
                             </div>
+
+                            {/* イベント操作エリア (プルダウン + リスト) */}
                             <div className="bg-white p-3 rounded-2xl shadow-md flex-1 flex flex-col min-h-0 overflow-hidden">
-                                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
-                                    {EVENT_GROUPS.map((group, gIdx) => (
-                                        <div key={gIdx}>
-                                            <div className="flex items-center gap-1.5 mb-2">
-                                                {group.type === 'positive' ? <PlusCircle size={14} className="text-blue-500"/> : <MinusCircle size={14} className="text-red-500"/>}
-                                                <h4 className="text-xs font-bold text-gray-600">{group.title}</h4>
-                                            </div>
-                                            <div className="grid grid-cols-1 gap-1.5">
-                                                {group.events.map((evt, eIdx) => (
-                                                    <button key={eIdx} onClick={() => handleEvent(evt)} className={`w-full px-3 py-2 rounded-lg border transition-all duration-150 flex justify-between items-center group relative overflow-hidden ${group.baseColor}`}>
-                                                        <div className="text-left z-10"><div className="font-bold text-xs">{evt.label}</div><div className="text-[10px] opacity-70 mt-0.5">{evt.desc}</div></div>
-                                                        <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10">{group.type === 'positive' ? '+' : ''}{Object.values(evt.effects).reduce((a, b) => a + b, 0)}</div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
+                                
+                                {/* カテゴリ選択プルダウン */}
+                                <div className="relative mb-3 flex-none">
+                                    <select 
+                                        value={selectedCategory} 
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-500">
+                                        <ChevronDown size={16} />
+                                    </div>
                                 </div>
+
+                                {/* イベントリスト (スクロール) */}
+                                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                                    {/* ポジティブ */}
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-2 sticky top-0 bg-white/95 py-1 z-10">
+                                            <PlusCircle size={14} className="text-blue-500"/>
+                                            <h4 className="text-xs font-bold text-gray-600">プラスの出来事</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                            {currentEvents.pos.map((evt, idx) => (
+                                                <button key={idx} onClick={() => handleEvent(evt)} className="w-full px-3 py-2 rounded-lg border transition-all duration-150 flex justify-between items-center group relative overflow-hidden bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800">
+                                                    <div className="text-left z-10 overflow-hidden">
+                                                        <div className="font-bold text-xs truncate">{evt.label}</div>
+                                                        <div className="text-[10px] opacity-70 mt-0.5 truncate">{evt.desc}</div>
+                                                    </div>
+                                                    <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10 flex-none ml-2">
+                                                        +{evt.eff.reduce((a, b) => a + b, 0)}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* ネガティブ */}
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-2 sticky top-0 bg-white/95 py-1 z-10">
+                                            <MinusCircle size={14} className="text-red-500"/>
+                                            <h4 className="text-xs font-bold text-gray-600">マイナスの出来事</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                            {currentEvents.neg.map((evt, idx) => (
+                                                <button key={idx} onClick={() => handleEvent(evt)} className="w-full px-3 py-2 rounded-lg border transition-all duration-150 flex justify-between items-center group relative overflow-hidden bg-red-50 hover:bg-red-100 border-red-200 text-red-800">
+                                                    <div className="text-left z-10 overflow-hidden">
+                                                        <div className="font-bold text-xs truncate">{evt.label}</div>
+                                                        <div className="text-[10px] opacity-70 mt-0.5 truncate">{evt.desc}</div>
+                                                    </div>
+                                                    <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10 flex-none ml-2">
+                                                        {evt.eff.reduce((a, b) => a + b, 0)}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ログエリア */}
                                 <div className="mt-3 pt-2 border-t flex-none">
                                     <h4 className="text-[10px] font-bold text-gray-400 mb-1">Log</h4>
                                     <ul className="space-y-1">
