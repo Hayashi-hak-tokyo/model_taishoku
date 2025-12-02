@@ -60,6 +60,7 @@
         // --- 設定値 ---
         const MAX_HP = 100;
         const SECRET_PASSWORD = "1234";
+        const EVENT_SCALE = 5; // 変動倍率：元の値を5倍にして、中央値を20程度にする設定
 
         const STAGES = [
             { id: 'fulfillment', label: '充実・成長', color: 'bg-[#E95438]', textColor: 'text-gray-900', angle: -90 },
@@ -192,6 +193,7 @@
                     <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
                         <div className="flex justify-center mb-4 text-gray-400"><Lock size={48} /></div>
                         <h2 className="text-lg font-bold text-gray-700 mb-2">限定アクセス</h2>
+                        <p className="text-xs text-gray-500 mb-6">閲覧用のパスワードを入力してください</p>
                         <input type="password" value={input} onChange={(e) => { setInput(e.target.value); setError(false); }} placeholder="パスワード" className="w-full p-3 rounded-lg border border-gray-300 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-center" autoFocus />
                         {error && <p className="text-red-500 text-xs mb-4 font-bold">パスワードが間違っています</p>}
                         <button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors">解除</button>
@@ -225,6 +227,8 @@
             useEffect(() => {
                 const avg = Object.values(params).reduce((a, b) => a + b, 0) / 6;
                 let nextStage = 'fulfillment';
+                
+                // ロジック調整：HPが残っていても退職フェーズに行きやすくする
                 if (avg >= 92) nextStage = 'fulfillment';      
                 else if (avg >= 80) nextStage = 'wavering';    
                 else if (avg >= 65) nextStage = 'conflict';    
@@ -232,6 +236,7 @@
                 else if (avg >= 45) nextStage = 'quiet_quitting'; 
                 else if (avg >= 35) nextStage = 'indifference'; 
                 else nextStage = 'resignation';                 
+                
                 setCurrentStage(nextStage);
             }, [params]);
 
@@ -240,7 +245,9 @@
                     const newParams = { ...prev };
                     const keys = ['sysFairness', 'intFairness', 'autonomy', 'competence', 'resource', 'energy'];
                     keys.forEach((key, idx) => {
-                        newParams[key] = Math.max(0, Math.min(MAX_HP, prev[key] + effectsArray[idx]));
+                        // 倍率を適用
+                        const change = effectsArray[idx] * EVENT_SCALE;
+                        newParams[key] = Math.max(0, Math.min(MAX_HP, prev[key] + change));
                     });
                     return newParams;
                 });
@@ -248,7 +255,7 @@
 
             const handleEvent = (event) => {
                 updateParams(event.eff);
-                const totalEffect = event.eff.reduce((a, b) => a + b, 0);
+                const totalEffect = event.eff.reduce((a, b) => a + b, 0) * EVENT_SCALE;
                 const sign = totalEffect >= 0 ? '+' : '';
                 setLogs(prev => [{ text: event.label, desc: event.desc, effect: `${sign}${totalEffect}`, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 3));
             };
@@ -347,7 +354,7 @@
                                                         <div className="text-[10px] opacity-70 mt-0.5 truncate">{evt.desc}</div>
                                                     </div>
                                                     <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10 flex-none ml-2">
-                                                        +{evt.eff.reduce((a, b) => a + b, 0)}
+                                                        +{evt.eff.reduce((a, b) => a + b, 0) * EVENT_SCALE}
                                                     </div>
                                                 </button>
                                             ))}
@@ -368,7 +375,7 @@
                                                         <div className="text-[10px] opacity-70 mt-0.5 truncate">{evt.desc}</div>
                                                     </div>
                                                     <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10 flex-none ml-2">
-                                                        {evt.eff.reduce((a, b) => a + b, 0)}
+                                                        {evt.eff.reduce((a, b) => a + b, 0) * EVENT_SCALE}
                                                     </div>
                                                 </button>
                                             ))}
