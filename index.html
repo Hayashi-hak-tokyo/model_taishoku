@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>心理モデル_動的版</title>
+    <title>退職プロセス・シミュレーター</title>
     
     <!-- エラーを画面に表示する仕掛け -->
     <script>
@@ -73,8 +73,6 @@
         ];
 
         // --- データセット (スプレッドシートから移植) ---
-        // category: 大カテゴリ(中カテゴリー), label: 小カテゴリー, desc: コミュニケーション媒介, type: pos/neg
-        // effects: [制度, 対人, 裁量, 有用, 負荷, エネ]
         const RAW_EVENTS = [
             // 制度・運用
             { cat: "制度・運用", label: "評価制度・給与体系", desc: "年功序列の給与への納得感", type: "pos", eff: [4,3,2,2,1,0] },
@@ -208,6 +206,7 @@
             const [params, setParams] = useState({ sysFairness: 80, intFairness: 80, autonomy: 80, competence: 80, resource: 80, energy: 80 });
             const [currentStage, setCurrentStage] = useState('fulfillment');
             const [logs, setLogs] = useState([]);
+            const [rotation, setRotation] = useState(0); // 回転角度管理
             
             // カテゴリ選択用
             const [selectedCategory, setSelectedCategory] = useState("制度・運用");
@@ -242,7 +241,6 @@
                 
                 // 【追加ロジック】パラメータのどれか1つでも0以下になったら、強制的に「静かな退職」以下にする
                 if (minVal <= 0) {
-                    // 現在の判定が「静かな退職」より良い状態（上流）にある場合は、「静かな退職」に落とす
                     const betterStages = ['fulfillment', 'wavering', 'conflict', 'giving_up'];
                     if (betterStages.includes(nextStage)) {
                         nextStage = 'quiet_quitting';
@@ -277,6 +275,13 @@
                 setLogs([]);
             };
 
+            // 回転計算: 現在のステージが -90度(12時)に来るようにする
+            const activeStageData = STAGES.find(s => s.id === currentStage);
+            // activeStageData.angle が現在のステージの元々の位置
+            // これを -90 (12時) に持ってきたい
+            // rotationOffset = -90 - activeStageData.angle
+            const rotationOffset = activeStageData ? -90 - activeStageData.angle : 0;
+
             const getPosition = (angle, radius) => {
                 const radian = (angle * Math.PI) / 180;
                 return { left: `${50 + Math.cos(radian) * radius}%`, top: `${50 + Math.sin(radian) * radius}%` };
@@ -305,10 +310,11 @@
                                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[72%] h-[72%] bg-gray-100 rounded-full z-10 border-2 border-dashed border-gray-300"></div>
                                 {/* 外周ステージ */}
                                 {STAGES.map((stage) => {
-                                    const pos = getPosition(stage.angle, 44);
+                                    // ここで回転オフセットを加算
+                                    const pos = getPosition(stage.angle + rotationOffset, 44);
                                     const isActive = currentStage === stage.id;
                                     return (
-                                        <div key={stage.id} className={`absolute transform -translate-x-1/2 -translate-y-1/2 rounded-full flex flex-col items-center justify-center text-center z-30 w-20 h-20 md:w-24 md:h-24 ${stage.color} ${stage.textColor} ${isActive ? 'ring-4 ring-offset-2 ring-gray-600 z-40' : 'opacity-80 grayscale-[0.3]'} transition-all duration-300`} style={{ left: pos.left, top: pos.top }}>
+                                        <div key={stage.id} className={`absolute transform -translate-x-1/2 -translate-y-1/2 rounded-full flex flex-col items-center justify-center text-center z-30 w-20 h-20 md:w-24 md:h-24 ${stage.color} ${stage.textColor} ${isActive ? 'ring-4 ring-offset-2 ring-gray-600 z-40' : 'opacity-80 grayscale-[0.3]'} transition-all duration-700 ease-in-out`} style={{ left: pos.left, top: pos.top }}>
                                             <span className="font-bold text-[10px] md:text-xs leading-tight px-1 block">{stage.label}</span>
                                             {stage.sub && <span className="text-[8px] md:text-[9px] leading-tight block mt-0.5">{stage.sub}</span>}
                                         </div>
