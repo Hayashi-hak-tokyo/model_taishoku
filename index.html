@@ -225,7 +225,10 @@
             }, [selectedCategory]);
 
             useEffect(() => {
-                const avg = Object.values(params).reduce((a, b) => a + b, 0) / 6;
+                const values = Object.values(params);
+                const avg = values.reduce((a, b) => a + b, 0) / 6;
+                const minVal = Math.min(...values);
+
                 let nextStage = 'fulfillment';
                 
                 // ロジック調整：HPが残っていても退職フェーズに行きやすくする
@@ -237,6 +240,15 @@
                 else if (avg >= 35) nextStage = 'indifference'; 
                 else nextStage = 'resignation';                 
                 
+                // 【追加ロジック】パラメータのどれか1つでも0以下になったら、強制的に「静かな退職」以下にする
+                if (minVal <= 0) {
+                    // 現在の判定が「静かな退職」より良い状態（上流）にある場合は、「静かな退職」に落とす
+                    const betterStages = ['fulfillment', 'wavering', 'conflict', 'giving_up'];
+                    if (betterStages.includes(nextStage)) {
+                        nextStage = 'quiet_quitting';
+                    }
+                }
+
                 setCurrentStage(nextStage);
             }, [params]);
 
