@@ -56,7 +56,6 @@
         // --- 設定値 ---
         const MAX_HP = 100;
         const EVENT_SCALE = 5; // 変動倍率：元の値を5倍にして、中央値を20程度にする設定
-        // パスワードチェックを削除するため、SECRET_PASSWORDの定義も不要です
 
         const STAGES = [
             { id: 'fulfillment', label: '充実・成長', color: 'bg-[#E95438]', textColor: 'text-gray-900', angle: -90 },
@@ -178,7 +177,7 @@
             </div>
         );
 
-        // LoginScreen コンポーネントは削除します
+        // LoginScreen コンポーネントの定義を削除しました。
 
         // --- メインコンポーネント ---
         function App() {
@@ -245,3 +244,166 @@
             };
 
             const handleEvent = (event) => {
+                updateParams(event.eff);
+                const totalEffect = event.eff.reduce((a, b) => a + b, 0) * EVENT_SCALE;
+                const sign = totalEffect >= 0 ? '+' : '';
+                setLogs(prev => [{ text: event.label, desc: event.desc, effect: `${sign}${totalEffect}`, time: new Date().toLocaleTimeString() }, ...prev].slice(0, 3));
+            };
+
+            const reset = () => {
+                setParams({ sysFairness: 100, intFairness: 100, autonomy: 100, competence: 100, resource: 100, energy: 100 });
+                setLogs([]);
+            };
+
+            // 回転計算: 現在のステージが -90度(12時)に来るようにする
+            const activeStageData = STAGES.find(s => s.id === currentStage);
+            // activeStageData.angle が現在のステージの元々の位置
+            // これを -90 (12時) に持ってきたい
+            // rotationOffset = -90 - activeStageData.angle
+            const rotationOffset = activeStageData ? -90 - activeStageData.angle : 0;
+
+            const getPosition = (angle, radius) => {
+                const radian = (angle * Math.PI) / 180;
+                return { left: `${50 + Math.cos(radian) * radius}%`, top: `${50 + Math.sin(radian) * radius}%` };
+            };
+
+            // ログインチェックロジックを削除したため、Appコンポーネントは直接メインUIを返します。
+            // if (!isLoggedIn) return <LoginScreen onLogin={() => setIsLoggedIn(true)} />; // 削除済
+            
+            return (
+                <div className="h-screen bg-gray-50 text-gray-800 font-sans p-2 flex flex-col overflow-hidden">
+                    <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+                        {/* 左: シミュレーター */}
+                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-md flex items-center justify-center p-4 min-h-[300px] overflow-hidden">
+                            <div className="relative shrink-0 mx-auto" style={{ width: 'min(500px, 80vmin)', height: 'min(500px, 80vmin)' }}>
+                                {/* 中心: 固定要素 */}
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[58%] h-[58%] bg-gray-600 rounded-full z-20 flex items-center justify-center p-6 shadow-inner ring-4 ring-gray-100">
+                                    <div className="w-full h-full flex flex-col justify-center gap-2">
+                                        <ParamMini label="公平性(制度的)" value={params.sysFairness} color="bg-blue-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="公平性(対人的)" value={params.intFairness} color="bg-indigo-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="裁量感" value={params.autonomy} color="bg-green-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="有用感" value={params.competence} color="bg-emerald-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="心理的リソース（負荷）" value={params.resource} color="bg-pink-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                        <ParamMini label="身体的エネルギー" value={params.energy} color="bg-orange-400" trackColor="bg-gray-700" textColor="text-gray-100" />
+                                    </div>
+                                </div>
+                                {/* 背景円 */}
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[72%] h-[72%] bg-gray-100 rounded-full z-10 border-2 border-dashed border-gray-300"></div>
+                                {/* 外周ステージ */}
+                                {STAGES.map((stage) => {
+                                    // ここで回転オフセットを加算
+                                    const pos = getPosition(stage.angle + rotationOffset, 44);
+                                    const isActive = currentStage === stage.id;
+                                    return (
+                                        <div key={stage.id} className={`absolute transform -translate-x-1/2 -translate-y-1/2 rounded-full flex flex-col items-center justify-center text-center z-30 w-20 h-20 md:w-24 md:h-24 ${stage.color} ${stage.textColor} ${isActive ? 'ring-4 ring-offset-2 ring-gray-600 z-40' : 'opacity-80 grayscale-[0.3]'} transition-all duration-700 ease-in-out`} style={{ left: pos.left, top: pos.top }}>
+                                            <span className="font-bold text-[10px] md:text-xs leading-tight px-1 block">{stage.label}</span>
+                                            {stage.sub && <span className="text-[8px] md:text-[9px] leading-tight block mt-0.5">{stage.sub}</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* 右: 操作パネル */}
+                        <div className="flex flex-col gap-3 min-h-0">
+                            {/* ステータス */}
+                            <div className="bg-white p-3 rounded-2xl shadow-md border-l-4 border-gray-700 flex-none">
+                                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Current Status</h3>
+                                <div className="flex justify-between items-end">
+                                    <div className="text-lg font-bold text-gray-800">{STAGES.find(s => s.id === currentStage)?.label}</div>
+                                    <button onClick={reset} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-gray-100 mb-0.5"><RotateCcw size={12} /> リセット</button>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5">
+                                    <div className="bg-gray-800 h-1 rounded-full transition-all duration-500" style={{ width: `${Object.values(params).reduce((a,b)=>a+b,0)/6}%`}}></div>
+                                </div>
+                            </div>
+
+                            {/* イベント操作エリア (プルダウン + リスト) */}
+                            <div className="bg-white p-3 rounded-2xl shadow-md flex-1 flex flex-col min-h-0 overflow-hidden">
+                                
+                                {/* カテゴリ選択プルダウン */}
+                                <div className="relative mb-3 flex-none">
+                                    <select 
+                                        value={selectedCategory} 
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-500">
+                                        <ChevronDown size={16} />
+                                    </div>
+                                </div>
+
+                                {/* イベントリスト (スクロール) */}
+                                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                                    {/* ポジティブ */}
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-2 sticky top-0 bg-white/95 py-1 z-10">
+                                            <PlusCircle size={14} className="text-blue-500"/>
+                                            <h4 className="text-xs font-bold text-gray-600">プラスの出来事</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                            {currentEvents.pos.map((evt, idx) => (
+                                                <button key={idx} onClick={() => handleEvent(evt)} className="w-full px-3 py-2 rounded-lg border transition-all duration-150 flex justify-between items-center group relative overflow-hidden bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800">
+                                                    <div className="text-left z-10 overflow-hidden">
+                                                        <div className="font-bold text-xs truncate">{evt.label}</div>
+                                                        <div className="text-[10px] opacity-70 mt-0.5 truncate">{evt.desc}</div>
+                                                    </div>
+                                                    <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10 flex-none ml-2">
+                                                        +{evt.eff.reduce((a, b) => a + b, 0) * EVENT_SCALE}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* ネガティブ */}
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-2 sticky top-0 bg-white/95 py-1 z-10">
+                                            <MinusCircle size={14} className="text-red-500"/>
+                                            <h4 className="text-xs font-bold text-gray-600">マイナスの出来事</h4>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                            {currentEvents.neg.map((evt, idx) => (
+                                                <button key={idx} onClick={() => handleEvent(evt)} className="w-full px-3 py-2 rounded-lg border transition-all duration-150 flex justify-between items-center group relative overflow-hidden bg-red-50 hover:bg-red-100 border-red-200 text-red-800">
+                                                    <div className="text-left z-10 overflow-hidden">
+                                                        <div className="font-bold text-xs truncate">{evt.label}</div>
+                                                        <div className="text-[10px] opacity-70 mt-0.5 truncate">{evt.desc}</div>
+                                                    </div>
+                                                    <div className="text-[10px] font-mono font-bold opacity-60 bg-white/50 px-1.5 py-0.5 rounded z-10 flex-none ml-2">
+                                                        {evt.eff.reduce((a, b) => a + b, 0) * EVENT_SCALE}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ログエリア */}
+                                <div className="mt-3 pt-2 border-t flex-none">
+                                    <h4 className="text-[10px] font-bold text-gray-400 mb-1">Log</h4>
+                                    <ul className="space-y-1">
+                                        {logs.length === 0 && <li className="text-[10px] text-gray-300">イベント待ち...</li>}
+                                        {logs.map((log, i) => (
+                                            <li key={i} className="text-[10px] text-gray-600 flex justify-between animate-fade-in items-center">
+                                                <div className="truncate mr-2 flex items-center gap-1"><span className={`w-1 h-1 rounded-full ${log.effect.includes('+') ? 'bg-blue-400' : 'bg-red-400'}`}></span>{log.text}</div>
+                                                <span className="text-gray-400 flex-none text-[9px]">{log.time}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
